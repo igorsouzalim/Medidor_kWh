@@ -444,7 +444,7 @@ void ATM90E36::begin()
   
   //Set metering calibration values (CALIBRATION)
   CommEnergyIC(WRITE, CalStart, 0x5678);    // Metering calibration startup 
-  CommEnergyIC(WRITE, GainA, 0x0000);       // Line calibration gain
+  CommEnergyIC(WRITE, GainA, 0x0000);       // Line calibration gain          *** Default 0x0000
   CommEnergyIC(WRITE, PhiA, 0x0000);        // Line calibration angle
   CommEnergyIC(WRITE, GainB, 0x0000);       // Line calibration gain
   CommEnergyIC(WRITE, PhiB, 0x0000);        // Line calibration angle
@@ -476,7 +476,7 @@ void ATM90E36::begin()
   CommEnergyIC(WRITE, IoffsetA, 0x0000);    // A line current offset
   CommEnergyIC(WRITE, UgainB, 0x0002);      // B Voltage rms gain
   CommEnergyIC(WRITE, IgainB, 0xFD7F);      // B line current gain
-  CommEnergyIC(WRITE, UoffsetB, 0x0000);    // B Voltage offset
+  CommEnergyIC(WRITE, UoffsetB, 0x0000);    // B Voltage offset 
   CommEnergyIC(WRITE, IoffsetB, 0x0000);    // B line current offset
   CommEnergyIC(WRITE, UgainC, 0x0002);      // C Voltage rms gain
   CommEnergyIC(WRITE, IgainC, 0xFD7F);      // C line current gain
@@ -492,4 +492,12 @@ void ATM90E36::begin()
   CommEnergyIC(WRITE, AdjStart, 0x5678);    // 0x6886 //0x5678 //8765);  
 
   CommEnergyIC(WRITE, SoftReset, 0x789A);   // Perform soft reset  
+
+
+//Calibração Igor
+  	CommEnergyIC(WRITE,ConfigStart, 0x5678);		// modo configuração	
+		delay(50);
+		CommEnergyIC(WRITE,0x34, 0x0055);
+		CommEnergyIC(WRITE, IgainA, 46500);      // A line current gainD
+		CommEnergyIC(WRITE,0x30, 0x8765);
 }

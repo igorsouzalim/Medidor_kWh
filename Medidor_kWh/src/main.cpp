@@ -67,7 +67,7 @@ RemoteDebug Debug;
 #define VSPI_SCLK   SCK
 #define VSPI_SS     SS
 
- #define CF1 13
+#define CF1 13
 #define CF2 22
 #define CF3 14
 #define CF4 27
@@ -75,10 +75,14 @@ RemoteDebug Debug;
 #define PM0 32
 #define PM1 15
 
+#define LED1 2
+#define LED2 25
+#define LED3 33
+
 // SSID and password
 
-const char* ssid = "ESP32";
-const char* password = "eletronica";
+const char* ssid = "Andre";
+const char* password = "Julia220816";
 
 
 ATM90E36 eic(5);
@@ -103,11 +107,19 @@ void setup() {
   pinMode(PM0, OUTPUT);
   pinMode(PM1, OUTPUT);
   
+  pinMode(LED1,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  pinMode(LED3,OUTPUT);
 
   digitalWrite(DMA_CTRL, LOW);
   digitalWrite(PM0, HIGH);
   digitalWrite(PM1, HIGH);
-  
+
+  digitalWrite(LED1,1);
+  digitalWrite(LED2,1);
+  digitalWrite(LED3,1);
+
+
   eic.begin();
 
   iniciaTelnet();
@@ -117,6 +129,10 @@ void setup() {
 
 
 void loop() {
+
+  digitalWrite(LED1,!digitalRead(LED1));
+  digitalWrite(LED2,!digitalRead(LED2));
+  digitalWrite(LED3,!digitalRead(LED3));
   
   /*Repeatedly fetch some values from the ATM90E36 */
   double voltageA,freq,voltageB,voltageC,currentA,currentB,currentC,totalActivePower,totalReactivePower,totalApparentPower,totalFactorPower,temp;
