@@ -1,6 +1,8 @@
 
 #include <SPI.h>
 #include <ATM90E36.h>
+#include <otadrive_esp.h>
+
 #define HOST_NAME "remotedebug"
 
 // Board especific libraries
@@ -89,6 +91,15 @@ ATM90E36 eic(5);
 
 void iniciaTelnet();
 
+void ota()
+{
+  if(OTADRIVE.timeTick(30))
+  {
+    OTADRIVE.updateFirmware();
+  }
+}
+
+
 void setup() {
   /* Initialize the serial port to host */
   Serial.begin(115200);
@@ -124,15 +135,21 @@ void setup() {
 
   iniciaTelnet();
   delay(1000);
+
+  OTADRIVE.setInfo("a04979c1-492a-4e55-834b-d851d8572755", "v@1.1.3");
 }
 
 
 
 void loop() {
 
+
+
   digitalWrite(LED1,!digitalRead(LED1));
   digitalWrite(LED2,!digitalRead(LED2));
   digitalWrite(LED3,!digitalRead(LED3));
+
+  ota();
   
   /*Repeatedly fetch some values from the ATM90E36 */
   double voltageA,freq,voltageB,voltageC,currentA,currentB,currentC,totalActivePower,totalReactivePower,totalApparentPower,totalFactorPower,temp;
