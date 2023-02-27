@@ -2,6 +2,22 @@
 #include <SPI.h>
 #include <ATM90E36.h>
 #include <otadrive_esp.h>
+#include <PubSubClient.h>    // Biblioteca MQTT Publicar e Subescrever
+
+
+const char* mqttServer = "postman.cloudmqtt.com";
+const int mqttPort = 14923;
+const char* mqttUser = "zkytiriu";
+const char* mqttPassword = "WcfXgbW1cWDs";
+
+void publicar();
+void conectar_wifi();
+void conectar_mqtt();
+void callback(char* topic, byte* message, unsigned int length);
+
+WiFiClient Inst2;
+PubSubClient client(Inst2);
+
 
 #define HOST_NAME "remotedebug"
 
@@ -93,7 +109,7 @@ void iniciaTelnet();
 
 void ota()
 {
-  if(OTADRIVE.timeTick(30))
+  if(OTADRIVE.timeTick(30))  //30
   {
     OTADRIVE.updateFirmware();
   }
@@ -132,18 +148,20 @@ void setup() {
 
 
   eic.begin();
+    conectar_mqtt();
+    delay(500);
 
-  iniciaTelnet();
+  //iniciaTelnet();
   delay(1000);
 
-  OTADRIVE.setInfo("a04979c1-492a-4e55-834b-d851d8572755", "v@1.1.3");
+  OTADRIVE.setInfo("a04979c1-492a-4e55-834b-d851d8572755", "v@1.1.4");
 }
 
 
 
 void loop() {
 
-
+  
 
   digitalWrite(LED1,!digitalRead(LED1));
   digitalWrite(LED2,!digitalRead(LED2));
@@ -153,47 +171,47 @@ void loop() {
   
   /*Repeatedly fetch some values from the ATM90E36 */
   double voltageA,freq,voltageB,voltageC,currentA,currentB,currentC,totalActivePower,totalReactivePower,totalApparentPower,totalFactorPower,temp;
-  int sys0=eic.GetSysStatus0();
-  int sys1=eic.GetSysStatus1();
-  int en0=eic.GetMeterStatus0();
-  int en1=eic.GetMeterStatus1();
+  // int sys0=eic.GetSysStatus0();
+  // int sys1=eic.GetSysStatus1();
+  // int en0=eic.GetMeterStatus0();
+  // int en1=eic.GetMeterStatus1();
 
   
-  Serial.println("S0:0x"+String(sys0,HEX));
-  delay(10);
-  Serial.println("S1:0x"+String(sys1,HEX));
-  delay(10);
-  Serial.println("E0:0x"+String(en0,HEX));
-  delay(10);
-  Serial.println("E1:0x"+String(en1,HEX));
+  // Serial.println("S0:0x"+String(sys0,HEX));
+  // delay(10);
+  // Serial.println("S1:0x"+String(sys1,HEX));
+  // delay(10);
+  // Serial.println("E0:0x"+String(en0,HEX));
+  // delay(10);
+  // Serial.println("E1:0x"+String(en1,HEX));
 
 
-  voltageA=eic.GetLineVoltageA();
-  Serial.println("VA:"+String(voltageA)+"V");
-  voltageB=eic.GetLineVoltageB();
-  Serial.println("VB:"+String(voltageB)+"V");
-  voltageC=eic.GetLineVoltageC();
-  Serial.println("VC:"+String(voltageC)+"V");
-  delay(10);
-  currentA = eic.GetLineCurrentA();
-  Serial.println("IA:"+String(currentA)+"A");
-  currentB = eic.GetLineCurrentB();
-  Serial.println("IB:"+String(currentB)+"A");
-  currentC = eic.GetLineCurrentC();
-  Serial.println("IC:"+String(currentC)+"A");
-  delay(10);
-  freq=eic.GetFrequency();
-  delay(10);
-  Serial.println("f"+String(freq)+"Hz");
-  delay(10);
-  temp=eic.GetTemperature();
-  delay(10);
-  Serial.println("Temperatura:"+String(temp)+"C");
-  delay(10);
-  totalActivePower = eic.GetTotalActivePower();
-  Serial.println("potencia ativa:"+String(totalActivePower)+"W");
-  delay(1000);
-  delay(1000);
+  // voltageA=eic.GetLineVoltageA();
+  // Serial.println("VA:"+String(voltageA)+"V");
+  // voltageB=eic.GetLineVoltageB();
+  // Serial.println("VB:"+String(voltageB)+"V");
+  // voltageC=eic.GetLineVoltageC();
+  // Serial.println("VC:"+String(voltageC)+"V");
+  // delay(10);
+  // currentA = eic.GetLineCurrentA();
+  // Serial.println("IA:"+String(currentA)+"A");
+  // currentB = eic.GetLineCurrentB();
+  // Serial.println("IB:"+String(currentB)+"A");
+  // currentC = eic.GetLineCurrentC();
+  // Serial.println("IC:"+String(currentC)+"A");
+  // delay(10);
+  // freq=eic.GetFrequency();
+  // delay(10);
+  // Serial.println("f"+String(freq)+"Hz");
+  // delay(10);
+  // temp=eic.GetTemperature();
+  // delay(10);
+  // Serial.println("Temperatura:"+String(temp)+"C");
+  // delay(10);
+  // totalActivePower = eic.GetTotalActivePower();
+  // Serial.println("potencia ativa:"+String(totalActivePower)+"W");
+  // delay(1000);
+  // delay(1000);
 
 
 
@@ -226,19 +244,64 @@ void loop() {
 
     
   
-  debugI("Voltage A: %.3fV | B: %.3fV | C: %.3fV ", voltageA,voltageB,voltageC);
-  debugI("Current A: %.3fA | B: %.3fA | C: %.3fA ", currentA,currentB,currentC);
-  debugI("ActivePower: %.3fW | ReactivePower: %.3fVAR", totalActivePower, totalReactivePower);
-  debugI("ApparentPower: %.3fVA | PowerFactor: %.2f ", totalApparentPower, totalFactorPower);
-  debugI("Freq: %.3fHz| Temp: %.3fC", freq, temp);
-  debugI("__________________________________________________________");
-  debugI("");
+  // debugI("Voltage A: %.3fV | B: %.3fV | C: %.3fV ", voltageA,voltageB,voltageC);
+  // debugI("Current A: %.3fA | B: %.3fA | C: %.3fA ", currentA,currentB,currentC);
+  // debugI("ActivePower: %.3fW | ReactivePower: %.3fVAR", totalActivePower, totalReactivePower);
+  // debugI("ApparentPower: %.3fVA | PowerFactor: %.2f ", totalApparentPower, totalFactorPower);
+  // debugI("Freq: %.3fHz| Temp: %.3fC", freq, temp);
+  // debugI("__________________________________________________________");
+  // debugI("");
  
-  Debug.handle();
-  delay(1000);
+  // Debug.handle();
+  // delay(1000);
 
 
- 
+  client.loop();
+
+  if(!client.connected()){
+     //Serial.println("status wifi...");
+     //Serial.println(WiFi.status());
+     delay(3000);
+     //Serial.println(WiFi.status());
+
+      if (WiFi.status() == 7)
+      {
+
+      //Serial.println("***************************************");home
+      //Serial.println("conexao perdida...");
+     //online = 1;
+
+      }
+  conectar_mqtt();
+}
+
+char tempString[10];
+
+dtostrf(voltageA, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/va", tempString);
+
+dtostrf(voltageB, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/vb", tempString);
+
+dtostrf(voltageC, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/vc", tempString);
+
+dtostrf(currentA, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/ia", tempString);
+
+dtostrf(currentB, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/ib", tempString);
+
+dtostrf(currentC, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/ic", tempString);
+
+dtostrf(totalActivePower, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/p", tempString);
+
+dtostrf(temp, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/tempATM90", tempString);
+
+delay(1000);
 }
 
 
@@ -294,3 +357,72 @@ void iniciaTelnet()
 
 
 }
+
+
+
+
+void conectar_mqtt()
+{
+   //offline = 1;
+  client.setServer(mqttServer, mqttPort);
+  client.setCallback(callback);
+  
+  while (!client.connected()) 
+  {
+    
+    //Serial.println("Connecting to MQTT...");
+    if (client.connect("Inst2", mqttUser, mqttPassword )) 
+    {
+      //Serial.println("connected");
+      
+      // Lista de topicos para Subscrever abaixo:
+      //client.subscribe("RST_MQTT");
+      //client.subscribe("AUTO_MQTT");
+      
+    } 
+    else 
+    {
+      Serial.print("failed with state ");
+      Serial.print(client.state());
+      delay(2000);
+      //conectar_wifi(); //se nao conseguiu reconectar Mqtt verifica e reconecta WiFi
+      WiFi.begin(ssid, password);
+      Serial.println("");
+
+      // Wait for connection
+      while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+      }
+
+      
+    }
+  }
+}
+
+void callback(char* topic, byte* message, unsigned int length) // Função que recebe a mensagem da subscrição
+ {  
+  Serial.print("Message arrived on topic: ");
+  Serial.print(topic);
+  Serial.print(". Message: ");
+  String messageTemp;
+  
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)message[i]);
+    messageTemp += (char)message[i];
+  }
+  //Serial.println();
+
+  
+  if (String(topic) == "RST_MQTT") {  // Verifica a mensagem recebida no topico RST_MQTT
+    Serial.print("Changing output to ");
+    
+    if(messageTemp == "1"){
+      //Serial.println("on");               
+      
+      //RL1 = 1;
+      
+    }
+  }
+  
+ }
