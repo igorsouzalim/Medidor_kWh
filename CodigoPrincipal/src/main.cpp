@@ -1,9 +1,10 @@
 #include <WiFi.h>
 #include <SPI.h>
 #include <ATM90E36.h>
-//#include <otadrive_esp.h>
+#include <otadrive_esp.h>
 #include <PubSubClient.h>    // Biblioteca MQTT Publicar e Subescrever
 
+int codeVersion;
 
 const char* mqttServer = "postman.cloudmqtt.com";
 const int mqttPort = 14923;
@@ -42,18 +43,23 @@ PubSubClient client(Inst2);
 const char* ssid = "Andre";
 const char* password = "Julia220816";
 
+unsigned long previousMillis = 0; 
+unsigned long previousMillis2 = 0; 
+unsigned long previousMillis3 = 0; 
+
+float total = 0;
 
 ATM90E36 eic(5);
 
-//void iniciaTelnet();
 
-// void ota()
-// {
-//   if(OTADRIVE.timeTick(30))  //30
-//   {
-//     OTADRIVE.updateFirmware();
-//   }
-// }
+void ota()
+{
+  if(OTADRIVE.timeTick(30))  //30
+  {
+    auto r = OTADRIVE.updateFirmware();
+    codeVersion = (int)r.code;
+  }
+}
 
 void setup_wifi();
 
@@ -96,20 +102,26 @@ void setup() {
   //iniciaTelnet();
   delay(1000);
 
-  //OTADRIVE.setInfo("a04979c1-492a-4e55-834b-d851d8572755", "v@1.1.4");
+  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.1.6");
 }
-
 
 
 void loop() {
 
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= 50) {
+    previousMillis = currentMillis;
+     ota();
+     digitalWrite(LED3,!digitalRead(LED3));
+  }
+
+
+  //digitalWrite(LED1,!digitalRead(LED1));
+  //digitalWrite(LED2,!digitalRead(LED2));
   
 
-  digitalWrite(LED1,!digitalRead(LED1));
-  digitalWrite(LED2,!digitalRead(LED2));
-  digitalWrite(LED3,!digitalRead(LED3));
-
-  //ota();
+ 
   
   /*Repeatedly fetch some values from the ATM90E36 */
   double voltageA,freq,voltageB,voltageC,currentA,currentB,currentC,totalActivePower,totalReactivePower,totalApparentPower,totalFactorPower,temp;
@@ -153,9 +165,23 @@ void loop() {
   // totalActivePower = eic.GetTotalActivePower();
   // Serial.println("potencia ativa:"+String(totalActivePower)+"W");
   // delay(1000);
+
+
+
+  currentMillis = millis();
+if (currentMillis - previousMillis3 >= 1000) {
+    previousMillis3 = currentMillis;
+
+
+    totalActivePower = eic.GetTotalActivePower();
+    total += (float)totalActivePower/3600;
+
+}
   
-
-
+ currentMillis = millis();
+if (currentMillis - previousMillis2 >= 3000) {
+    previousMillis2 = currentMillis;
+    
   voltageA=eic.GetLineVoltageA();
   voltageB=eic.GetLineVoltageB();
   voltageC=eic.GetLineVoltageC();
@@ -169,21 +195,6 @@ void loop() {
   freq=eic.GetFrequency();
   temp=eic.GetTemperature();
 
-  //GetActivePowerA();
-  //GetActivePowerB();
-  //GetActivePowerC();
-  //GetReactivePowerA();
-  //GetReactivePowerB();
-  //GetReactivePowerC();
-  //GetApparentPowerA();
-  //GetApparentPowerB();
-  //GetApparentPowerC();
-  //GetPowerFactorA();
-  //GetPowerFactorB();
-  //GetPowerFactorC();
-  
-
-    
   client.loop();
 
   if(!client.connected()){
@@ -200,34 +211,45 @@ void loop() {
   conectar_mqtt();
 }
 
-char tempString[10];
+char tempString[15];
 
 dtostrf(voltageA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/va", tempString);
 
-dtostrf(voltageB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-client.publish("home/vb", tempString);
+// dtostrf(voltageB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+// client.publish("home/vb", tempString);
 
-dtostrf(voltageC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-client.publish("home/vc", tempString);
+// dtostrf(voltageC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+// client.publish("home/vc", tempString);
 
 dtostrf(currentA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/ia", tempString);
 
-dtostrf(currentB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-client.publish("home/ib", tempString);
+// dtostrf(currentB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+// client.publish("home/ib", tempString);
 
-dtostrf(currentC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-client.publish("home/ic", tempString);
+// dtostrf(currentC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+// client.publish("home/ic", tempString);
 
 dtostrf(totalActivePower, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/p", tempString);
 
-dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-client.publish("home/tempATM90", tempString);
+// dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+// client.publish("home/tempATM90", tempString);
+
+dtostrf(codeVersion, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/versao", tempString);
+
+
+dtostrf((total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/total", tempString);
 
 Serial.println("send mqtt...");
-delay(2000);
+
+digitalWrite(LED2,!digitalRead(LED2));
+
+}
+
 }
 
 
@@ -243,6 +265,7 @@ void setup_wifi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(LED2,!digitalRead(LED2));
   }
 
   Serial.println("");
