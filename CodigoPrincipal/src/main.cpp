@@ -131,7 +131,7 @@ void setup() {
 
   delay(1000);
 
-  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.2");
+  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.3");
 
   //xTaskCreatePinnedToCore( vTaskLCD, "Task LCD", configMINIMAL_STACK_SIZE*2, NULL, 3, NULL, CORE_1 );
 }
