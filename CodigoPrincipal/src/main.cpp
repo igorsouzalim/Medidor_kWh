@@ -1,7 +1,7 @@
-
+#include <WiFi.h>
 #include <SPI.h>
 #include <ATM90E36.h>
-#include <otadrive_esp.h>
+//#include <otadrive_esp.h>
 #include <PubSubClient.h>    // Biblioteca MQTT Publicar e Subescrever
 
 
@@ -18,66 +18,6 @@ void callback(char* topic, byte* message, unsigned int length);
 WiFiClient Inst2;
 PubSubClient client(Inst2);
 
-
-#define HOST_NAME "remotedebug"
-
-// Board especific libraries
-
-#if defined ESP8266 || defined ESP32
-
-// Use mDNS ? (comment this do disable it)
-
-#define USE_MDNS true
-
-// Arduino OTA (uncomment this to enable)
-
-//#define USE_ARDUINO_OTA true
-
-#else
-
-// RemoteDebug library is now only to Espressif boards,
-// as ESP32 and ESP82266,
-// If need for another WiFi boards,
-// please add an issue about this
-// and we will see if it is possible made the port for your board.
-// access: https://github.com/JoaoLopesF/RemoteDebug/issues
-
-#error "The board must be ESP8266 or ESP32"
-
-#endif // ESP
-
-//////// Libraries
-
-#if defined ESP8266
-
-// Includes of ESP8266
-
-#include <ESP8266WiFi.h>
-
-#ifdef USE_MDNS
-#include <DNSServer.h>
-#include <ESP8266mDNS.h>
-#endif
-
-#elif defined ESP32
-
-// Includes of ESP32
-
-#include <WiFi.h>
-
-#ifdef USE_MDNS
-#include <DNSServer.h>
-#include "ESPmDNS.h"
-#endif
-
-#endif // ESP
-
-// Remote debug over WiFi - not recommended for production, only for development
-
-#include <RemoteDebug.h>       //https://github.com/JoaoLopesF/RemoteDebug
-
-
-RemoteDebug Debug;
 
 //DEFINES SPI
 #define VSPI_MISO   MISO
@@ -105,16 +45,17 @@ const char* password = "Julia220816";
 
 ATM90E36 eic(5);
 
-void iniciaTelnet();
+//void iniciaTelnet();
 
-void ota()
-{
-  if(OTADRIVE.timeTick(30))  //30
-  {
-    OTADRIVE.updateFirmware();
-  }
-}
+// void ota()
+// {
+//   if(OTADRIVE.timeTick(30))  //30
+//   {
+//     OTADRIVE.updateFirmware();
+//   }
+// }
 
+void setup_wifi();
 
 void setup() {
   /* Initialize the serial port to host */
@@ -146,6 +87,7 @@ void setup() {
   digitalWrite(LED2,1);
   digitalWrite(LED3,1);
 
+  setup_wifi();
 
   eic.begin();
     conectar_mqtt();
@@ -154,7 +96,7 @@ void setup() {
   //iniciaTelnet();
   delay(1000);
 
-  OTADRIVE.setInfo("a04979c1-492a-4e55-834b-d851d8572755", "v@1.1.4");
+  //OTADRIVE.setInfo("a04979c1-492a-4e55-834b-d851d8572755", "v@1.1.4");
 }
 
 
@@ -167,7 +109,7 @@ void loop() {
   digitalWrite(LED2,!digitalRead(LED2));
   digitalWrite(LED3,!digitalRead(LED3));
 
-  ota();
+  //ota();
   
   /*Repeatedly fetch some values from the ATM90E36 */
   double voltageA,freq,voltageB,voltageC,currentA,currentB,currentC,totalActivePower,totalReactivePower,totalApparentPower,totalFactorPower,temp;
@@ -211,8 +153,7 @@ void loop() {
   // totalActivePower = eic.GetTotalActivePower();
   // Serial.println("potencia ativa:"+String(totalActivePower)+"W");
   // delay(1000);
-  // delay(1000);
-
+  
 
 
   voltageA=eic.GetLineVoltageA();
@@ -243,121 +184,72 @@ void loop() {
   
 
     
-  
-  // debugI("Voltage A: %.3fV | B: %.3fV | C: %.3fV ", voltageA,voltageB,voltageC);
-  // debugI("Current A: %.3fA | B: %.3fA | C: %.3fA ", currentA,currentB,currentC);
-  // debugI("ActivePower: %.3fW | ReactivePower: %.3fVAR", totalActivePower, totalReactivePower);
-  // debugI("ApparentPower: %.3fVA | PowerFactor: %.2f ", totalApparentPower, totalFactorPower);
-  // debugI("Freq: %.3fHz| Temp: %.3fC", freq, temp);
-  // debugI("__________________________________________________________");
-  // debugI("");
- 
-  // Debug.handle();
-  // delay(1000);
-
-
   client.loop();
 
   if(!client.connected()){
      //Serial.println("status wifi...");
      //Serial.println(WiFi.status());
-     delay(3000);
+     delay(500);
      //Serial.println(WiFi.status());
-
       if (WiFi.status() == 7)
       {
-
       //Serial.println("***************************************");home
       //Serial.println("conexao perdida...");
      //online = 1;
-
       }
   conectar_mqtt();
 }
 
 char tempString[10];
 
-dtostrf(voltageA, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(voltageA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/va", tempString);
 
-dtostrf(voltageB, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(voltageB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/vb", tempString);
 
-dtostrf(voltageC, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(voltageC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/vc", tempString);
 
-dtostrf(currentA, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(currentA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/ia", tempString);
 
-dtostrf(currentB, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(currentB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/ib", tempString);
 
-dtostrf(currentC, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(currentC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/ic", tempString);
 
-dtostrf(totalActivePower, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(totalActivePower, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/p", tempString);
 
-dtostrf(temp, 10, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/tempATM90", tempString);
 
-delay(1000);
+Serial.println("send mqtt...");
+delay(2000);
 }
 
 
+void setup_wifi() {
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
-void iniciaTelnet()
-{
-    // WiFi connection
+  WiFi.begin(ssid, password);
 
-    WiFi.begin(ssid, password);
-    Serial.println("");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
 
-    // Wait for connection
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    // Register host name in WiFi and mDNS
-
-    String hostNameWifi = HOST_NAME;
-    hostNameWifi.concat(".local");
-
-
-#ifdef USE_MDNS  // Use the MDNS ?
-
-    if (MDNS.begin(HOST_NAME)) {
-        Serial.print("* MDNS responder started. Hostname -> ");
-        Serial.println(HOST_NAME);
-    }
-
-    MDNS.addService("telnet", "tcp", 23);
-
-#endif
-
-  // Initialize RemoteDebug
-
-    Debug.begin(HOST_NAME); // Initialize the WiFi server
-    Debug.setResetCmdEnabled(true); // Enable the reset command
-    Debug.showProfiler(true); // Profiler (Good to measure times, to optimize codes)
-    Debug.showColors(true); // Colors
-
-    // End off setup
-    Serial.print("* WiFI connected. IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.println("*");
-    Serial.println("* Please use the telnet client (telnet for Mac/Unix or putty and others for Windows)");
-
-
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 }
-
 
 
 
