@@ -2,23 +2,10 @@
 #include <SPI.h>
 #include <ATM90E36.h>
 #include <otadrive_esp.h>
-#include <PubSubClient.h>    // Biblioteca MQTT Publicar e Subescrever
-
-int codeVersion;
-
-const char* mqttServer = "postman.cloudmqtt.com";
-const int mqttPort = 14923;
-const char* mqttUser = "zkytiriu";
-const char* mqttPassword = "WcfXgbW1cWDs";
-
-void publicar();
-void conectar_wifi();
-void conectar_mqtt();
-void callback(char* topic, byte* message, unsigned int length);
-
-WiFiClient Inst2;
-PubSubClient client(Inst2);
-
+#include <PubSubClient.h>   
+#include <Preferences.h> 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 //DEFINES SPI
 #define VSPI_MISO   MISO
@@ -38,6 +25,19 @@ PubSubClient client(Inst2);
 #define LED2 25
 #define LED3 33
 
+const char* mqttServer = "postman.cloudmqtt.com";
+const int mqttPort = 14923;
+const char* mqttUser = "zkytiriu";
+const char* mqttPassword = "WcfXgbW1cWDs";
+
+void publicar();
+void conectar_wifi();
+void conectar_mqtt();
+void callback(char* topic, byte* message, unsigned int length);
+
+WiFiClient Inst2;
+PubSubClient client(Inst2);
+
 // SSID and password
 
 const char* ssid = "Andre";
@@ -54,10 +54,9 @@ ATM90E36 eic(5);
 
 void ota()
 {
-  if(OTADRIVE.timeTick(30))  //30
+  if(OTADRIVE.timeTick(180))  // Limite de verificações de atualização no servidor 500 vezes (172ms valor minimo)
   {
-    auto r = OTADRIVE.updateFirmware();
-    codeVersion = (int)r.code;
+    OTADRIVE.updateFirmware();
   }
 }
 
@@ -96,13 +95,12 @@ void setup() {
   setup_wifi();
 
   eic.begin();
-    conectar_mqtt();
-    delay(500);
+  conectar_mqtt();
+  delay(500);
 
-  //iniciaTelnet();
   delay(1000);
 
-  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.1.6");
+  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.1");
 }
 
 
