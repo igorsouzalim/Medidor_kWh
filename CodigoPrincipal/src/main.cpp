@@ -1,3 +1,11 @@
+/**
+ *  ---Funcionalidaes para adicionar---
+ * 
+ * - Tempo de scan do OTA
+ * - botão para zerar o KW
+ * - 
+ */
+
 #include <WiFi.h>
 #include <SPI.h>
 #include <ATM90E36.h>
@@ -30,15 +38,12 @@ const int mqttPort = 14923;
 const char* mqttUser = "zkytiriu";
 const char* mqttPassword = "WcfXgbW1cWDs";
 
-void publicar();
-void conectar_wifi();
-void conectar_mqtt();
-void callback(char* topic, byte* message, unsigned int length);
 
 WiFiClient Inst2;
 PubSubClient client(Inst2);
+Preferences preferences;
+ATM90E36 eic(5);
 
-// SSID and password
 
 const char* ssid = "Andre";
 const char* password = "Julia220816";
@@ -47,9 +52,12 @@ unsigned long previousMillis = 0;
 unsigned long previousMillis2 = 0; 
 unsigned long previousMillis3 = 0; 
 
-float total = 0;
+float kW_total,kW_totalAnterior;
 
-ATM90E36 eic(5);
+void publicar();
+void conectar_wifi();
+void conectar_mqtt();
+void callback(char* topic, byte* message, unsigned int length);
 
 
 void ota()
@@ -71,7 +79,7 @@ void setup() {
   Serial.println("Start ATM90E36");
   /*Initialise the ATM90E36 + SPI port */
 
-   pinMode(CF1, INPUT);
+  pinMode(CF1, INPUT);
   pinMode(CF2, INPUT);
   pinMode(CF3, INPUT);
   pinMode(CF4, INPUT);
@@ -83,6 +91,30 @@ void setup() {
   pinMode(LED1,OUTPUT);
   pinMode(LED2,OUTPUT);
   pinMode(LED3,OUTPUT);
+
+   //Inicia EEPROM
+  preferences.begin("Storage", false); 
+
+  kW_total = preferences.getFloat("kW_total", 0); 
+  //ConsumoMensal = preferences.getFloat("ConsumoMensal", 0); 
+  //ssid = preferences.getString("SSID", ""); 
+  //password = preferences.getString("Password", "");
+
+  // if(debugStartFlashMemory)
+  // {
+  //   Serial.println();
+  //   Serial.println(">>> [STARTS WITH STORED IN EEPROM]");
+  //   // Serial.print("ID: "); Serial.println(ID); 
+  //   Serial.print("kW_total: "); Serial.println(kW_total);  
+  //   // Serial.print("WIFI_SSID: "); Serial.println(ssid); 
+  //   // Serial.print("WIFI_PASSWORD: "); Serial.println(password); 
+  //   // Serial.println("____________________________");
+
+  //   if (volumeAguaMensal == 0 )
+  //     Serial.println("No values saved for volumeAguaMensal");
+  //   if (ssid == "" || password == "")
+  //   Serial.println("No values saved for ssid or password");
+  // }
 
   digitalWrite(DMA_CTRL, LOW);
   digitalWrite(PM0, HIGH);
@@ -96,11 +128,12 @@ void setup() {
 
   eic.begin();
   conectar_mqtt();
-  delay(500);
 
   delay(1000);
 
-  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.1");
+  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.2");
+
+  //xTaskCreatePinnedToCore( vTaskLCD, "Task LCD", configMINIMAL_STACK_SIZE*2, NULL, 3, NULL, CORE_1 );
 }
 
 
@@ -114,66 +147,20 @@ void loop() {
      digitalWrite(LED3,!digitalRead(LED3));
   }
 
-
-  //digitalWrite(LED1,!digitalRead(LED1));
-  //digitalWrite(LED2,!digitalRead(LED2));
-  
-
- 
-  
-  /*Repeatedly fetch some values from the ATM90E36 */
   double voltageA,freq,voltageB,voltageC,currentA,currentB,currentC,totalActivePower,totalReactivePower,totalApparentPower,totalFactorPower,temp;
-  // int sys0=eic.GetSysStatus0();
-  // int sys1=eic.GetSysStatus1();
-  // int en0=eic.GetMeterStatus0();
-  // int en1=eic.GetMeterStatus1();
-
   
-  // Serial.println("S0:0x"+String(sys0,HEX));
-  // delay(10);
-  // Serial.println("S1:0x"+String(sys1,HEX));
-  // delay(10);
-  // Serial.println("E0:0x"+String(en0,HEX));
-  // delay(10);
-  // Serial.println("E1:0x"+String(en1,HEX));
-
-
-  // voltageA=eic.GetLineVoltageA();
-  // Serial.println("VA:"+String(voltageA)+"V");
-  // voltageB=eic.GetLineVoltageB();
-  // Serial.println("VB:"+String(voltageB)+"V");
-  // voltageC=eic.GetLineVoltageC();
-  // Serial.println("VC:"+String(voltageC)+"V");
-  // delay(10);
-  // currentA = eic.GetLineCurrentA();
-  // Serial.println("IA:"+String(currentA)+"A");
-  // currentB = eic.GetLineCurrentB();
-  // Serial.println("IB:"+String(currentB)+"A");
-  // currentC = eic.GetLineCurrentC();
-  // Serial.println("IC:"+String(currentC)+"A");
-  // delay(10);
-  // freq=eic.GetFrequency();
-  // delay(10);
-  // Serial.println("f"+String(freq)+"Hz");
-  // delay(10);
-  // temp=eic.GetTemperature();
-  // delay(10);
-  // Serial.println("Temperatura:"+String(temp)+"C");
-  // delay(10);
-  // totalActivePower = eic.GetTotalActivePower();
-  // Serial.println("potencia ativa:"+String(totalActivePower)+"W");
-  // delay(1000);
-
-
-
   currentMillis = millis();
 if (currentMillis - previousMillis3 >= 1000) {
     previousMillis3 = currentMillis;
 
-
     totalActivePower = eic.GetTotalActivePower();
-    total += (float)totalActivePower/3600;
+    kW_total += (float)totalActivePower/3600;
 
+    if( kW_totalAnterior >= (float)(kW_total+(float)0.5))
+    {
+      kW_totalAnterior = kW_total;
+      //preferences.putFloat("kW_total", kW_total); 
+    }
 }
   
  currentMillis = millis();
@@ -214,20 +201,8 @@ char tempString[15];
 dtostrf(voltageA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/va", tempString);
 
-// dtostrf(voltageB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-// client.publish("home/vb", tempString);
-
-// dtostrf(voltageC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-// client.publish("home/vc", tempString);
-
 dtostrf(currentA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/ia", tempString);
-
-// dtostrf(currentB, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-// client.publish("home/ib", tempString);
-
-// dtostrf(currentC, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-// client.publish("home/ic", tempString);
 
 dtostrf(totalActivePower, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/p", tempString);
@@ -235,12 +210,11 @@ client.publish("home/p", tempString);
 // dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 // client.publish("home/tempATM90", tempString);
 
-dtostrf(codeVersion, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-client.publish("home/versao", tempString);
-
-
-dtostrf((total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+dtostrf((kW_total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
 client.publish("home/total", tempString);
+
+dtostrf((kW_total), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+client.publish("home/kwTotal", tempString);
 
 Serial.println("send mqtt...");
 
