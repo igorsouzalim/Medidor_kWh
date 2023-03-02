@@ -3,7 +3,9 @@
  * 
  * - Tempo de scan do OTA
  * - botão para zerar o KW
- * - 
+ * 
+ * ----Bugs------
+ * - Evitar potencia negativa no somatorio e na mostragem pro mqtt
  */
 
 #include <WiFi.h>
@@ -96,6 +98,8 @@ void setup() {
   preferences.begin("Storage", false); 
 
   kW_total = preferences.getFloat("kW_total", 0); 
+  kW_totalAnterior = kW_total;
+
   //ConsumoMensal = preferences.getFloat("ConsumoMensal", 0); 
   //ssid = preferences.getString("SSID", ""); 
   //password = preferences.getString("Password", "");
@@ -131,7 +135,7 @@ void setup() {
 
   delay(1000);
 
-  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.3");
+  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.4");
 
   //xTaskCreatePinnedToCore( vTaskLCD, "Task LCD", configMINIMAL_STACK_SIZE*2, NULL, 3, NULL, CORE_1 );
 }
@@ -156,10 +160,12 @@ if (currentMillis - previousMillis3 >= 1000) {
     totalActivePower = eic.GetTotalActivePower();
     kW_total += (float)totalActivePower/3600;
 
-    if( kW_totalAnterior >= (float)(kW_total+(float)0.5))
+    if( kW_totalAnterior >= (float)(kW_total+(float)0.001))
     {
       kW_totalAnterior = kW_total;
-      //preferences.putFloat("kW_total", kW_total); 
+      preferences.putFloat("kW_total", kW_total); 
+      
+      client.publish("home/debug", "kw_saved");
     }
 }
   
