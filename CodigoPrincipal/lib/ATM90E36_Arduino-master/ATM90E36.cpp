@@ -498,6 +498,6 @@ void ATM90E36::begin()
   	CommEnergyIC(WRITE,ConfigStart, 0x5678);		// modo configuração	
 		delay(50);
 		CommEnergyIC(WRITE,0x34, 0x0055);
-		CommEnergyIC(WRITE, IgainA, 46500);      // A line current gainD
+		CommEnergyIC(WRITE, IgainA, 46600);      // A line current gainD
 		CommEnergyIC(WRITE,0x30, 0x8765);
 }
