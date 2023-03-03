@@ -1,11 +1,11 @@
 /**
  *  ---Funcionalidaes para adicionar---
  * 
- * - Tempo de scan do OTA
+ * - Tempo de scan do OTA - OK
  * - botão para zerar o KW
  * 
  * ----Bugs------
- * - Evitar potencia negativa no somatorio e na mostragem pro mqtt
+ * - Evitar potencia negativa no somatorio e na mostragem pro mqtt - OK (testar)
  */
 
 #include "header.h"
@@ -42,6 +42,7 @@ void setup() {
 
   kW_total = preferences.getFloat("kW_total", 0); 
   kW_totalAnterior = kW_total;
+
 
   //ConsumoMensal = preferences.getFloat("ConsumoMensal", 0); 
   //ssid = preferences.getString("SSID", ""); 
@@ -88,10 +89,8 @@ void setup() {
 
 void loop() {
 
-  
-  
 
-
+delay(10);
 }
 
 
@@ -110,16 +109,30 @@ void vTaskIntegralEnergy(void *pvParameters){
   for(;;)
   {
     double totalActivePower = eic.GetTotalActivePower();
-    kW_total += (float)totalActivePower/3600;
+      if(totalActivePower>(float)0.0000)
+      {
+        kW_total += (float)totalActivePower/3600;
 
-    if( kW_total >= (float)(kW_totalAnterior+(float)0.010))
-    {
-      kW_totalAnterior = kW_total;
-      preferences.putFloat("kW_total", kW_total); 
-      
-      
-      client.publish("home/powerMeter/debug", "kw_saved");
-    }
+        if( kW_total >= (float)(kW_totalAnterior+(float)0.010))
+        {
+          kW_totalAnterior = kW_total;
+          preferences.putFloat("kW_total", kW_total); 
+          
+          
+          //client.publish("home/powerMeter/debug", "kw_saved");
+        }
+      }
+      else if(totalActivePower<(float)0.0000)
+      {
+        //client.publish("home/powerMeter/debug", "NegativePowerMesurement");
+      }
+
+      if(erase == 1)
+      {
+        erase = 0;
+        preferences.putFloat("kW_total", 0);
+      }
+    
     vTaskDelay(1000/portTICK_PERIOD_MS);
   }
 }
@@ -175,8 +188,11 @@ void vTaskPublishMQTT(void *pvParameters){
     // dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
     // client.publish("home/powerMeter/tempATM90", tempString);
 
-    dtostrf((kW_total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/powerMeter/total", tempString);
+    dtostrf((kW_total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
+    client.publish("home/powerMeter/monthlyConsumption", tempString);
+
+    // dtostrf((daily_consumption*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
+    // client.publish("home/powerMeter/dailyConsumption", tempString);
 
     dtostrf((kW_total), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
     client.publish("home/powerMeter/kwTotal", tempString);

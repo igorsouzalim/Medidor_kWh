@@ -49,6 +49,8 @@ unsigned long previousMillis2 = 0;
 unsigned long previousMillis3 = 0; 
 
 float kW_total,kW_totalAnterior;
+uint8_t erase = 0; //apaga dados da memoria flash   1=kwTotal,2=kwMensal,3=kwDiario,4=Parcial
+
 
 void publicar();
 void conectar_wifi();
@@ -99,11 +101,12 @@ void conectar_mqtt()
     //Serial.println("Connecting to MQTT...");
     if (client.connect("Inst2", mqttUser, mqttPassword )) 
     {
-      //Serial.println("connected");
+      Serial.println("connected");
       
       // Lista de topicos para Subscrever abaixo:
-      //client.subscribe("RST_MQTT");
-      //client.subscribe("AUTO_MQTT");
+      client.subscribe("home/powerMeter/erase/kwTotal");
+      client.subscribe("home/powerMeter/erase/monthlyConsumption");
+      client.subscribe("home/powerMeter/erase/dailyConsumption");
       
     } 
     else 
@@ -140,15 +143,20 @@ void callback(char* topic, byte* message, unsigned int length) // Função que r
   //Serial.println();
 
   
-  if (String(topic) == "RST_MQTT") {  // Verifica a mensagem recebida no topico RST_MQTT
-    Serial.print("Changing output to ");
-    
+  if (String(topic) == "home/powerMeter/erase/kwTotal") {  // Verifica a mensagem recebida no topico RST_MQTT
     if(messageTemp == "1"){
-      //Serial.println("on");               
-      
-      //RL1 = 1;
-      
+      erase=1;
     }
   }
+  //   if (String(topic) == "home/powerMeter/erase/monthlyConsumption") {  // Verifica a mensagem recebida no topico RST_MQTT
+  //   if(messageTemp == "1"){
+  //     preferences.putFloat("kW_total", 0);
+  //   }
+  // }
+  //   if (String(topic) == "home/powerMeter/erase/dailyConsumption") {  // Verifica a mensagem recebida no topico RST_MQTT
+  //   if(messageTemp == "1"){
+  //     preferences.putFloat("kW_total", 0);
+  //   }
+  // }
   
  }
