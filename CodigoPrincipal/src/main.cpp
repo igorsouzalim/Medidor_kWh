@@ -118,7 +118,7 @@ void vTaskIntegralEnergy(void *pvParameters){
       preferences.putFloat("kW_total", kW_total); 
       
       
-      client.publish("home/debug", "kw_saved");
+      client.publish("home/powerMeter/debug", "kw_saved");
     }
     vTaskDelay(1000/portTICK_PERIOD_MS);
   }
@@ -126,6 +126,7 @@ void vTaskIntegralEnergy(void *pvParameters){
 
 
 void vTaskPublishMQTT(void *pvParameters){
+  uint16_t onlineCounter=0; 
 
   for(;;)
   {
@@ -163,26 +164,30 @@ void vTaskPublishMQTT(void *pvParameters){
     char tempString[15];
 
     dtostrf(voltageA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/va", tempString);
+    client.publish("home/powerMeter/va", tempString);
 
     dtostrf(currentA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/ia", tempString);
+    client.publish("home/powerMeter/ia", tempString);
 
     dtostrf(totalActivePower, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/p", tempString);
+    client.publish("home/powerMeter/p", tempString);
 
     // dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    // client.publish("home/tempATM90", tempString);
+    // client.publish("home/powerMeter/tempATM90", tempString);
 
     dtostrf((kW_total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/total", tempString);
+    client.publish("home/powerMeter/total", tempString);
 
     dtostrf((kW_total), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/kwTotal", tempString);
+    client.publish("home/powerMeter/kwTotal", tempString);
+
+    dtostrf((onlineCounter), 6, 0, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+    client.publish("home/powerMeter/onlineCounter", tempString);
 
     Serial.println("send mqtt...");
 
     digitalWrite(LED2,!digitalRead(LED2));
     vTaskDelay(2000/portTICK_PERIOD_MS);
+    onlineCounter++;  //Monitoramento de continuidade do sistema
   }
 }
