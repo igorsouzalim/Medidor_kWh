@@ -41,6 +41,12 @@ void setup() {
   preferences.begin("Storage", false); 
 
   kW_total = preferences.getFloat("kW_total", 0); 
+  kW_total = preferences.getFloat("kw_mensal", 0); 
+  kW_total = preferences.getFloat("kW_diario", 0); 
+  kW_total = preferences.getFloat("kW_parcial", 0); 
+  kW_total = preferences.getFloat("custo_mensal", 0); 
+  kW_total = preferences.getFloat("custo_diario", 0); 
+
   kW_totalAnterior = kW_total;
 
 
