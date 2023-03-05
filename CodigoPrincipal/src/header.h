@@ -48,9 +48,17 @@ unsigned long previousMillis = 0;
 unsigned long previousMillis2 = 0; 
 unsigned long previousMillis3 = 0; 
 
-float kW_total,kW_totalAnterior;
-uint8_t erase = 0; //apaga dados da memoria flash   1=kwTotal,2=kwMensal,3=kwDiario,4=Parcial
+float kW_total =0,
+      kw_mensal =0,
+      kW_diario =0,
+      custo_parcial =0,
+      custo_mensal =0,
+      custo_diario =0;
 
+int debugTimerEprom = 0;
+
+uint8_t erase = 0; //apaga dados da memoria flash   1=kwTotal,2=kwMensal,3=kwDiario,4=Parcial,5=custoMensal,6=custoDiario
+//bool semaforoEeprom = 0;
 
 void publicar();
 void conectar_wifi();
@@ -105,8 +113,11 @@ void conectar_mqtt()
       
       // Lista de topicos para Subscrever abaixo:
       client.subscribe("home/powerMeter/erase/kwTotal");
-      client.subscribe("home/powerMeter/erase/monthlyConsumption");
-      client.subscribe("home/powerMeter/erase/dailyConsumption");
+      client.subscribe("home/powerMeter/erase/kwMensal");
+      client.subscribe("home/powerMeter/erase/kwDiario");
+      client.subscribe("home/powerMeter/erase/custoMensal");
+      client.subscribe("home/powerMeter/erase/custoParcial");
+      client.subscribe("home/powerMeter/erase/custoDiario");
       
     } 
     else 
@@ -144,19 +155,29 @@ void callback(char* topic, byte* message, unsigned int length) // Função que r
 
   
   if (String(topic) == "home/powerMeter/erase/kwTotal") {  // Verifica a mensagem recebida no topico RST_MQTT
-    if(messageTemp == "1"){
+    if(messageTemp == "1")
       erase=1;
-    }
   }
-  //   if (String(topic) == "home/powerMeter/erase/monthlyConsumption") {  // Verifica a mensagem recebida no topico RST_MQTT
-  //   if(messageTemp == "1"){
-  //     preferences.putFloat("kW_total", 0);
-  //   }
-  // }
-  //   if (String(topic) == "home/powerMeter/erase/dailyConsumption") {  // Verifica a mensagem recebida no topico RST_MQTT
-  //   if(messageTemp == "1"){
-  //     preferences.putFloat("kW_total", 0);
-  //   }
-  // }
-  
+  if (String(topic) == "home/powerMeter/erase/kwMensal") {  // Verifica a mensagem recebida no topico RST_MQTT
+    if(messageTemp == "1")
+      erase=2;
+  }
+   if (String(topic) == "home/powerMeter/erase/kwDiario") {  // Verifica a mensagem recebida no topico RST_MQTT
+    if(messageTemp == "1")
+      erase=3;
+  }
+  if (String(topic) == "home/powerMeter/erase/custoParcial") {  // Verifica a mensagem recebida no topico RST_MQTT
+    if(messageTemp == "1")
+      erase=4;
+  }
+   if (String(topic) == "home/powerMeter/erase/custoMensal") {  // Verifica a mensagem recebida no topico RST_MQTT
+    if(messageTemp == "1")
+      erase=5;
+  }
+  if (String(topic) == "home/powerMeter/erase/custoDiario") {  // Verifica a mensagem recebida no topico RST_MQTT
+    if(messageTemp == "1")
+      erase=6;
+  }
+
+
  }

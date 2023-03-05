@@ -3,6 +3,8 @@
  * 
  * - Tempo de scan do OTA - OK
  * - botão para zerar o KW
+ * - Botar segundo wifi para conectar 
+ * - verificar se está gravando kw sem wifi conectado
  * 
  * ----Bugs------
  * - Evitar potencia negativa no somatorio e na mostragem pro mqtt - OK (testar)
@@ -41,34 +43,29 @@ void setup() {
   preferences.begin("Storage", false); 
 
   kW_total = preferences.getFloat("kW_total", 0); 
-  kW_total = preferences.getFloat("kw_mensal", 0); 
-  kW_total = preferences.getFloat("kW_diario", 0); 
-  kW_total = preferences.getFloat("kW_parcial", 0); 
-  kW_total = preferences.getFloat("custo_mensal", 0); 
-  kW_total = preferences.getFloat("custo_diario", 0); 
+  kw_mensal = preferences.getFloat("kw_mensal", 0); 
+  kW_diario = preferences.getFloat("kW_diario", 0); 
+  custo_parcial = preferences.getFloat("custo_parcial", 0); 
+  custo_mensal = preferences.getFloat("custo_mensal", 0); 
+  custo_diario = preferences.getFloat("custo_diario", 0); 
 
-  kW_totalAnterior = kW_total;
-
-
-  //ConsumoMensal = preferences.getFloat("ConsumoMensal", 0); 
   //ssid = preferences.getString("SSID", ""); 
   //password = preferences.getString("Password", "");
 
-  // if(debugStartFlashMemory)
-  // {
-  //   Serial.println();
-  //   Serial.println(">>> [STARTS WITH STORED IN EEPROM]");
-  //   // Serial.print("ID: "); Serial.println(ID); 
-  //   Serial.print("kW_total: "); Serial.println(kW_total);  
-  //   // Serial.print("WIFI_SSID: "); Serial.println(ssid); 
-  //   // Serial.print("WIFI_PASSWORD: "); Serial.println(password); 
-  //   // Serial.println("____________________________");
+
+    Serial.println();
+    Serial.println(">>> [STARTS WITH STORED IN EEPROM]");
+    // Serial.print("ID: "); Serial.println(ID); 
+    Serial.print("kW_total: "); Serial.println(kW_total);  
+    // Serial.print("WIFI_SSID: "); Serial.println(ssid); 
+    // Serial.print("WIFI_PASSWORD: "); Serial.println(password); 
+    // Serial.println("____________________________");
 
   //   if (volumeAguaMensal == 0 )
   //     Serial.println("No values saved for volumeAguaMensal");
   //   if (ssid == "" || password == "")
   //   Serial.println("No values saved for ssid or password");
-  // }
+  
 
   digitalWrite(DMA_CTRL, LOW);
   digitalWrite(PM0, HIGH);
@@ -78,18 +75,19 @@ void setup() {
   digitalWrite(LED2,1);
   digitalWrite(LED3,1);
 
-  setup_wifi();
-
   eic.begin();
-  conectar_mqtt();
-
+  
   delay(1000);
 
-  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.4");
+  xTaskCreatePinnedToCore( vTaskIntegralEnergy, "Task Energy", configMINIMAL_STACK_SIZE*8, NULL, 5, NULL, CORE_0 );
+  
+  setup_wifi();
+  conectar_mqtt();
 
   xTaskCreatePinnedToCore( vTaskOTA, "Task OTA", configMINIMAL_STACK_SIZE*4, NULL, 1, NULL, CORE_1 );
-  xTaskCreatePinnedToCore( vTaskIntegralEnergy, "Task Energy", configMINIMAL_STACK_SIZE*1, NULL, 1, NULL, CORE_0 );
-  xTaskCreatePinnedToCore( vTaskPublishMQTT, "Task OTA", configMINIMAL_STACK_SIZE*4, NULL, 1, NULL, CORE_1 );
+  xTaskCreatePinnedToCore( vTaskPublishMQTT, "Task mqtt", configMINIMAL_STACK_SIZE*4, NULL, 1, NULL, CORE_1 );
+
+  OTADRIVE.setInfo("cc901072-5ee5-4003-bb41-372d1780b039", "v@1.2.6");
 }
 
 
@@ -112,34 +110,102 @@ void vTaskOTA(void *pvParameters){
 
 
 void vTaskIntegralEnergy(void *pvParameters){
+  uint32_t timeToSave = 0, vFault = 0, vFaultTimerSaveProtection = 0;
   for(;;)
   {
     double totalActivePower = eic.GetTotalActivePower();
       if(totalActivePower>(float)0.0000)
       {
-        kW_total += (float)totalActivePower/3600;
-
-        if( kW_total >= (float)(kW_totalAnterior+(float)0.010))
-        {
-          kW_totalAnterior = kW_total;
-          preferences.putFloat("kW_total", kW_total); 
-          
-          
-          //client.publish("home/powerMeter/debug", "kw_saved");
-        }
+        kW_total += (float)totalActivePower/36000;
+        custo_mensal = kW_total;
       }
       else if(totalActivePower<(float)0.0000)
       {
         //client.publish("home/powerMeter/debug", "NegativePowerMesurement");
       }
 
-      if(erase == 1)
+      switch (erase)
       {
-        erase = 0;
-        preferences.putFloat("kW_total", 0);
+        case 1:
+          erase = 0;
+          preferences.putFloat("kW_total", 0);
+          kW_total = 0;
+        break;
+
+        case 2:
+          erase = 0;
+          preferences.putFloat("kw_mensal", 0);
+          kw_mensal = 0;
+        break;
+
+        case 3:
+          erase = 0;
+          preferences.putFloat("kW_diario", 0);
+          kW_diario = 0;
+        break;
+
+        case 4:
+          erase = 0;
+          preferences.putFloat("custo_parcial", 0);
+          custo_parcial = 0;
+        break;
+
+        case 5:
+          erase = 0;
+          preferences.putFloat("custo_mensal", 0);
+          custo_mensal = 0;
+        break;
+
+        case 6:
+          erase = 0;
+          preferences.putFloat("custo_diario", 0);
+          custo_diario = 0;
+        break;
+        
+        default:
+          break;
       }
-    
-    vTaskDelay(1000/portTICK_PERIOD_MS);
+
+      double voltageA=eic.GetLineVoltageA();
+      if(voltageA < 30.0)   // Faltou luz
+      {
+        vFault = 1;
+      }
+      else{
+        vFault = 0;
+      }
+
+      if(vFaultTimerSaveProtection < 1200)  // 2 minutos 
+        vFaultTimerSaveProtection++;
+
+      if(vFault == 1 && vFaultTimerSaveProtection >= 1200)
+      {
+        vFault = 0;
+        vFaultTimerSaveProtection = 0;
+        preferences.putFloat("kW_total", kW_total);
+        preferences.putFloat("kw_mensal", kw_mensal); 
+        preferences.putFloat("kW_diario", kW_diario); 
+        preferences.putFloat("custo_parcial", custo_parcial); 
+        preferences.putFloat("custo_mensal", custo_mensal); 
+        preferences.putFloat("custo_diario", custo_diario); 
+        Serial.println("vFault Saved eprom");
+        debugTimerEprom++;
+      }
+
+      if(timeToSave < 144000)
+        timeToSave ++;
+      else if(timeToSave >= 144000 ){
+        timeToSave=0;
+        preferences.putFloat("kW_total", kW_total);
+        preferences.putFloat("kw_mensal", kw_mensal); 
+        preferences.putFloat("kW_diario", kW_diario); 
+        preferences.putFloat("custo_parcial", custo_parcial); 
+        preferences.putFloat("custo_mensal", custo_mensal); 
+        preferences.putFloat("custo_diario", custo_diario); 
+        Serial.println("saved eeprom");
+      }
+      
+    vTaskDelay(100/portTICK_PERIOD_MS);
   }
 }
 
@@ -182,30 +248,39 @@ void vTaskPublishMQTT(void *pvParameters){
 
     char tempString[15];
 
-    dtostrf(voltageA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+    dtostrf(voltageA, 6, 1, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
     client.publish("home/powerMeter/va", tempString);
 
     dtostrf(currentA, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
     client.publish("home/powerMeter/ia", tempString);
 
-    dtostrf(totalActivePower, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    client.publish("home/powerMeter/p", tempString);
-
-    // dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
-    // client.publish("home/powerMeter/tempATM90", tempString);
-
-    dtostrf((kW_total*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
-    client.publish("home/powerMeter/monthlyConsumption", tempString);
-
-    // dtostrf((daily_consumption*1000), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
-    // client.publish("home/powerMeter/dailyConsumption", tempString);
+    dtostrf(totalActivePower*1000, 0, 0, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+    client.publish("home/powerMeter/actualPower", tempString);
 
     dtostrf((kW_total), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
     client.publish("home/powerMeter/kwTotal", tempString);
 
+    // dtostrf((kw_mensal), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+    // client.publish("home/powerMeter/kwMensal", tempString);
+
+    // dtostrf((kW_diario), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+    // client.publish("home/powerMeter/kwDiario", tempString);
+
+    dtostrf((custo_mensal), 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
+    client.publish("home/powerMeter/custoMensal", tempString);
+
+    // dtostrf((custo_mensal), 6, 4, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
+    // client.publish("home/powerMeter/custoDiario", tempString);
+
+    dtostrf((custo_mensal), 6, 4, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao);  
+    client.publish("home/powerMeter/custoParcial", tempString);
+
+    // dtostrf(temp, 6, 3, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
+    // client.publish("home/powerMeter/tempATM90", tempString);
+  
     dtostrf((onlineCounter), 6, 0, tempString); // dtostrf(variavel,comprimentoDaString,casasDecimais,RecebeAConversao); 
     client.publish("home/powerMeter/onlineCounter", tempString);
-
+    
     Serial.println("send mqtt...");
 
     digitalWrite(LED2,!digitalRead(LED2));
